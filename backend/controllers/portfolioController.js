@@ -1,58 +1,98 @@
+// Portfolio controller: Handles portfolio API requests, reads Excel, fetches live data, and computes sector summaries.
 const { readPortfolioFromExcel } = require('../utils/excelReader');
-const { getYahooStockData } = require('../services/yahooService');
+const { getYahooStockData, getScreenerBseStockData } = require('../services/yahooService');
 const { getGoogleFinanceData } = require('../services/googleService');
+const pLimit = require('p-limit').default;
 
+/**
+ * Main handler for GET /api/portfolio
+ * - Reads the portfolio Excel file
+ * - Fetches live CMP, P/E, and earnings from Yahoo/Screener
+ * - Computes investment, present value, gain/loss, and sector summaries
+ * - Handles both NSE and BSE stocks
+ */
 async function getPortfolioData(req, res) {
   try {
+    // Read all stocks from the Excel file (with sector assignment)
     const rawData = readPortfolioFromExcel();
-    console.log('DEBUG: Raw data from Excel:', JSON.stringify(rawData, null, 2));
+    // No slice limit: process all stocks
+    const limitedData = rawData;
 
-    // Compute total investment
+    // Compute total investment for portfolio percentage calculation
     let totalInvestment = 0;
-    rawData.forEach((item) => {
+    limitedData.forEach((item) => {
       const qty = Number(item['Qty'] || item['__EMPTY_3']) || 0;
       const price = Number(item['Purchase Price'] || item['__EMPTY_2']) || 0;
       totalInvestment += qty * price;
     });
 
+    // Limit concurrency for external API calls to avoid rate-limiting
+    const yahooLimit = pLimit(2); // Max 2 Yahoo calls at a time
+    const googleLimit = pLimit(2); // Max 2 Google calls at a time
+
+    // For each stock, fetch live data and compute derived fields
     const processedData = await Promise.all(
-      rawData.map(async (item) => {
+      limitedData.map(async (item) => {
         const stockName = item['Particulars'] || item['__EMPTY_1'];
         const rawSymbol = item['Symbol'] || item['NSE/BSE'] || item['__EMPTY_6'];
         const purchasePrice = Number(item['Purchase Price'] || item['__EMPTY_2']) || 0;
         const quantity = Number(item['Qty'] || item['__EMPTY_3']) || 0;
         const sector = item['sector'] || 'Unknown';
 
+        // Skip rows with missing stock or symbol
         if (!rawSymbol || !stockName) {
-          console.warn(`⚠️ Skipping row with missing stock/symbol:`, item);
+          // This can happen if the Excel has blank or malformed rows
           return null;
         }
 
-        // Determine exchange suffix: .NS (NSE) or .BO (BSE)
+        // Determine if this is a BSE (numeric) or NSE (string) symbol
         const isNumeric = /^\d+$/.test(rawSymbol);
         const fullSymbol = `${rawSymbol}${isNumeric ? '.BO' : '.NS'}`;
 
-        // Yahoo Finance (CMP)
-        const yahooResult = await getYahooStockData(fullSymbol);
-        const cmp = yahooResult.cmp;
-        const cmpError = yahooResult.error;
+        // Fetch live data from the appropriate source
+        let cmp = null, cmpError = null, peRatio = 'N/A', latestEarnings = 'N/A', unsupported = false, unsupportedReason = '';
+        if (isNumeric) {
+          // BSE stock: use Screener.in scraper
+          let screenerResult = { cmp: null, peRatio: 'N/A', latestEarnings: 'N/A', error: 'Not fetched' };
+          try {
+            screenerResult = await getScreenerBseStockData(rawSymbol);
+          } catch (e) {
+            screenerResult = { cmp: null, peRatio: 'N/A', latestEarnings: 'N/A', error: e.message };
+          }
+          cmp = screenerResult.cmp;
+          cmpError = screenerResult.error;
+          peRatio = screenerResult.peRatio;
+          latestEarnings = screenerResult.latestEarnings;
+          if (cmp === null) {
+            unsupported = true;
+            unsupportedReason = 'Unsupported symbol: BSE code not found on Screener.';
+          }
+        } else {
+          // NSE stock: use Yahoo Finance
+          let yahooResult = { cmp: null, peRatio: 'N/A', latestEarnings: 'N/A', error: 'Not fetched' };
+          try {
+            yahooResult = await yahooLimit(async () => {
+              const result = await getYahooStockData(fullSymbol, true); // pass true to get extra data
+              return result;
+            });
+          } catch (e) {
+            yahooResult = { cmp: null, peRatio: 'N/A', latestEarnings: 'N/A', error: e.message };
+          }
+          cmp = yahooResult.cmp;
+          cmpError = yahooResult.error;
+          peRatio = yahooResult.peRatio;
+          latestEarnings = yahooResult.latestEarnings;
+          if (cmp === null) {
+            unsupported = true;
+            unsupportedReason = 'Unsupported symbol: Not available on Yahoo Finance.';
+          }
+        }
+
+        // Calculate present value and gain/loss
         const presentValue = cmp !== null ? cmp * quantity : null;
         const gainLoss = presentValue !== null ? presentValue - (quantity * purchasePrice) : null;
 
-        // Google Finance (P/E, Earnings)
-        const googleResult = await getGoogleFinanceData(rawSymbol);
-        const peRatio = googleResult.peRatio;
-        const latestEarnings = googleResult.latestEarnings;
-        const googleError = googleResult.error;
-
-        // Mark as unsupported if both Yahoo and Google fail for numeric BSE code
-        let unsupported = false;
-        let unsupportedReason = '';
-        if (/^\d+$/.test(rawSymbol) && cmpError && googleError) {
-          unsupported = true;
-          unsupportedReason = 'Unsupported symbol: BSE numeric codes are not available on Yahoo/Google Finance.';
-        }
-
+        // Return the enriched stock object
         return {
           stockName,
           symbol: rawSymbol,
@@ -66,7 +106,6 @@ async function getPortfolioData(req, res) {
           gainLoss,
           peRatio,
           latestEarnings,
-          googleError,
           portfolioPercent: totalInvestment ? ((quantity * purchasePrice / totalInvestment) * 100).toFixed(2) : '0',
           sector,
           unsupported,
@@ -75,10 +114,10 @@ async function getPortfolioData(req, res) {
       })
     );
 
-    // Remove nulls (skipped rows)
+    // Remove any nulls (skipped rows)
     const cleaned = processedData.filter(Boolean);
 
-    // Group by sector and compute sector summaries
+    // Group stocks by sector and compute sector-level summaries
     const sectorMap = {};
     cleaned.forEach((stock) => {
       if (!sectorMap[stock.sector]) {
@@ -100,15 +139,17 @@ async function getPortfolioData(req, res) {
       totalInvestment: s.totalInvestment,
       totalPresentValue: s.totalPresentValue,
       totalGainLoss: s.totalGainLoss,
-      stocks: s.stocks.map(({ sector, ...rest }) => rest), // omit sector in nested stocks
+      stocks: s.stocks,
     }));
 
+    // Send the portfolio data and sector summaries to the frontend
     res.json({
       data: cleaned,
       sectorSummaries,
     });
   } catch (err) {
-    console.error('💥 Error in getPortfolioData:', err.message);
+    // Log and return a user-friendly error
+    console.error('💥 Error in getPortfolioData:', err);
     res.status(500).json({ error: 'Something went wrong while fetching portfolio data.' });
   }
 }

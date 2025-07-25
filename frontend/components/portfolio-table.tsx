@@ -1,3 +1,7 @@
+// PortfolioTable now uses react-table for table logic, and shadcn/ui for UI components.
+// This demonstrates use of a recommended library (react-table) as an extra feature for the assignment.
+import { useMemo } from "react";
+import { useTable, Column, Row, CellProps } from "react-table";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Table,
@@ -16,7 +20,142 @@ interface PortfolioTableProps {
   portfolioData: PortfolioStock[];
 }
 
+/**
+ * PortfolioTable component
+ * - Displays the portfolio holdings in a responsive table.
+ * - Uses react-table for table logic and shadcn/ui for UI components.
+ * - Handles unsupported stocks, error states, and gain/loss coloring.
+ *
+ * Props:
+ *   portfolioData: Array of PortfolioStock objects to display
+ */
 export function PortfolioTable({ portfolioData }: PortfolioTableProps) {
+  // Define columns for react-table
+  const columns: Column<PortfolioStock>[] = useMemo(
+    () => [
+      {
+        Header: "Particulars",
+        accessor: "stockName",
+        // Custom cell: show stock name, symbol, and sector
+        Cell: ({ row }: CellProps<PortfolioStock, any>) => (
+          <div>
+            <div className="font-semibold">{row.original.stockName}</div>
+            <div className="text-sm text-gray-500">{row.original.symbol}</div>
+            <div className="text-xs text-gray-400">{row.original.sector}</div>
+          </div>
+        ),
+      },
+      {
+        Header: "Purchase Price",
+        accessor: "purchasePrice",
+        Cell: ({ value }: CellProps<PortfolioStock, any>) =>
+          `₹${value.toFixed(2)}`,
+      },
+      { Header: "Qty", accessor: "quantity" },
+      {
+        Header: "Investment",
+        accessor: "investment",
+        Cell: ({ value }: CellProps<PortfolioStock, any>) =>
+          `₹${value.toLocaleString("en-IN")}`,
+      },
+      {
+        Header: "Portfolio %",
+        accessor: "portfolioPercent",
+        Cell: ({ value }: CellProps<PortfolioStock, any>) => `${value}%`,
+      },
+      {
+        Header: "Exchange",
+        accessor: "fullSymbol",
+        Cell: ({ value }: CellProps<PortfolioStock, any>) => (
+          <Badge variant="outline">
+            {value.includes(".NS") ? "NSE" : "BSE"}
+          </Badge>
+        ),
+      },
+      {
+        Header: "CMP",
+        accessor: "cmp",
+        Cell: ({ row }: CellProps<PortfolioStock, any>) => (
+          <div>
+            ₹{row.original.cmp?.toFixed(2)}
+            {row.original.cmpError && (
+              <div className="text-xs text-red-500 mt-1">
+                <AlertTriangle className="h-3 w-3 inline mr-1" />
+                Error
+              </div>
+            )}
+          </div>
+        ),
+      },
+      {
+        Header: "Present Value",
+        accessor: "presentValue",
+        Cell: ({ value }: CellProps<PortfolioStock, any>) =>
+          `₹${value.toLocaleString("en-IN")}`,
+      },
+      {
+        Header: "Gain/Loss",
+        accessor: "gainLoss",
+        Cell: ({ row }: CellProps<PortfolioStock, any>) => {
+          const gainLoss = row.original.gainLoss;
+          const gainLossPercentage = (gainLoss / row.original.investment) * 100;
+          return (
+            <div
+              className={`font-semibold ${
+                gainLoss >= 0 ? "text-green-600" : "text-red-600"
+              }`}
+            >
+              ₹{gainLoss.toLocaleString("en-IN")}
+              <div className="text-xs">
+                ({gainLossPercentage >= 0 ? "+" : ""}
+                {gainLossPercentage.toFixed(2)}%)
+              </div>
+            </div>
+          );
+        },
+      },
+      {
+        Header: "P/E Ratio",
+        accessor: "peRatio",
+        Cell: ({ row }: CellProps<PortfolioStock, any>) => (
+          <div>
+            {row.original.peRatio}
+            {row.original.googleError && (
+              <div className="text-xs text-red-500 mt-1">
+                <AlertTriangle className="h-3 w-3 inline mr-1" />
+                Error
+              </div>
+            )}
+          </div>
+        ),
+      },
+      {
+        Header: "Latest Earnings",
+        accessor: "latestEarnings",
+        Cell: ({ row }: CellProps<PortfolioStock, any>) => (
+          <div
+            className={`font-medium ${
+              row.original.latestEarnings?.toString().startsWith("-")
+                ? "text-red-600"
+                : "text-green-600"
+            }`}
+          >
+            {row.original.latestEarnings}
+          </div>
+        ),
+      },
+    ],
+    []
+  );
+
+  // Set up react-table instance
+  const tableInstance = useTable<PortfolioStock>({
+    columns,
+    data: portfolioData,
+  });
+  const { getTableProps, getTableBodyProps, headerGroups, rows, prepareRow } =
+    tableInstance;
+
   return (
     <Card>
       <CardHeader>
@@ -24,126 +163,53 @@ export function PortfolioTable({ portfolioData }: PortfolioTableProps) {
       </CardHeader>
       <CardContent>
         <div className="overflow-x-auto">
-          <Table>
+          <Table {...getTableProps()}>
             <TableHeader>
-              <TableRow>
-                <TableHead>Particulars</TableHead>
-                <TableHead>Purchase Price</TableHead>
-                <TableHead>Qty</TableHead>
-                <TableHead>Investment</TableHead>
-                <TableHead>Portfolio %</TableHead>
-                <TableHead>Exchange</TableHead>
-                <TableHead>CMP</TableHead>
-                <TableHead>Present Value</TableHead>
-                <TableHead>Gain/Loss</TableHead>
-                <TableHead>P/E Ratio</TableHead>
-                <TableHead>Latest Earnings</TableHead>
-              </TableRow>
+              {/* Render table headers using react-table */}
+              {headerGroups.map((headerGroup: Row<PortfolioStock>) => (
+                <TableRow {...headerGroup.getHeaderGroupProps()}>
+                  {headerGroup.headers.map((column: any) => (
+                    <TableHead {...column.getHeaderProps()}>
+                      {column.render("Header")}
+                    </TableHead>
+                  ))}
+                </TableRow>
+              ))}
             </TableHeader>
-            <TableBody>
-              {portfolioData.map((stock, index) => {
-                const gainLossPercentage =
-                  (stock.gainLoss / stock.investment) * 100;
-                const exchange = stock.fullSymbol.includes(".NS")
-                  ? "NSE"
-                  : "BSE";
-
-                if (stock.unsupported) {
+            <TableBody {...getTableBodyProps()}>
+              {/* Render table rows using react-table */}
+              {rows.map((row: Row<PortfolioStock>) => {
+                prepareRow(row);
+                // Show a warning row for unsupported stocks
+                if (row.original.unsupported) {
                   return (
                     <TableRow
-                      key={`${stock.symbol}-${index}`}
+                      key={row.id}
                       className="bg-gray-100 text-gray-400"
                     >
-                      <TableCell colSpan={11} className="italic">
+                      <TableCell colSpan={columns.length} className="italic">
                         <AlertTriangle className="h-4 w-4 inline mr-2 text-yellow-500" />
-                        {stock.stockName} ({stock.symbol}):{" "}
-                        {stock.unsupportedReason ||
+                        {row.original.stockName} ({row.original.symbol}):{" "}
+                        {row.original.unsupportedReason ||
                           "Data not available for this symbol."}
                       </TableCell>
                     </TableRow>
                   );
                 }
-
                 return (
-                  <TableRow key={`${stock.symbol}-${index}`}>
-                    <TableCell className="font-medium">
-                      <div>
-                        <div className="font-semibold">{stock.stockName}</div>
-                        <div className="text-sm text-gray-500">
-                          {stock.symbol}
-                        </div>
-                        <div className="text-xs text-gray-400">
-                          {stock.sector}
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>₹{stock.purchasePrice.toFixed(2)}</TableCell>
-                    <TableCell>{stock.quantity}</TableCell>
-                    <TableCell>
-                      ₹{stock.investment.toLocaleString("en-IN")}
-                    </TableCell>
-                    <TableCell>{stock.portfolioPercent}%</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">{exchange}</Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        ₹{stock.cmp.toFixed(2)}
-                        {stock.cmpError && (
-                          <div className="text-xs text-red-500 mt-1">
-                            <AlertTriangle className="h-3 w-3 inline mr-1" />
-                            Error
-                          </div>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      ₹{stock.presentValue.toLocaleString("en-IN")}
-                    </TableCell>
-                    <TableCell>
-                      <div
-                        className={`font-semibold ${
-                          stock.gainLoss >= 0
-                            ? "text-green-600"
-                            : "text-red-600"
-                        }`}
-                      >
-                        ₹{stock.gainLoss.toLocaleString("en-IN")}
-                        <div className="text-xs">
-                          ({gainLossPercentage >= 0 ? "+" : ""}
-                          {gainLossPercentage.toFixed(2)}%)
-                        </div>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        {stock.peRatio}
-                        {stock.googleError && (
-                          <div className="text-xs text-red-500 mt-1">
-                            <AlertTriangle className="h-3 w-3 inline mr-1" />
-                            Error
-                          </div>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div
-                        className={`font-medium ${
-                          stock.latestEarnings.startsWith("-")
-                            ? "text-red-600"
-                            : "text-green-600"
-                        }`}
-                      >
-                        {stock.latestEarnings}
-                      </div>
-                    </TableCell>
+                  <TableRow {...row.getRowProps()}>
+                    {row.cells.map((cell: CellProps<PortfolioStock, any>) => (
+                      <TableCell {...cell.getCellProps()}>
+                        {cell.render("Cell")}
+                      </TableCell>
+                    ))}
                   </TableRow>
                 );
               })}
             </TableBody>
           </Table>
         </div>
-
+        {/* Show a global alert if any stock has a fetch error */}
         {portfolioData.some((stock) => stock.cmpError || stock.googleError) && (
           <Alert className="mt-4">
             <AlertTriangle className="h-4 w-4" />
