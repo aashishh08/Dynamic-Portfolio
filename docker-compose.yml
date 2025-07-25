@@ -4,7 +4,7 @@ services:
   backend:
     build:
       context: ./backend
-    container_name: backend
+    container_name: backend-portfolio
     ports:
       - "5000:4000"
     working_dir: /app
@@ -16,7 +16,7 @@ services:
   frontend:
     build:
       context: ./frontend
-    container_name: frontend
+    container_name: frontend-portfolio
     ports:
       - "3001:3000"
     env_file:
