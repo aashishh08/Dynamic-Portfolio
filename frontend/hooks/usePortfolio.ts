@@ -25,7 +25,9 @@ export function usePortfolio() {
   const fetchPortfolio = useCallback(async () => {
     try {
       setError(null);
-      const response = await fetch("http://localhost:4000/api/portfolio");
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_BASE}/portfolio`
+      );
 
       if (!response.ok) {
         throw new Error("Failed to fetch portfolio data");
