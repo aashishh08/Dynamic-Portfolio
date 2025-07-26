@@ -1,5 +1,3 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import type { SectorSummary as PortfolioSectorSummary } from "@/types/portfolio";
 
 interface SectorSummaryProps {
@@ -36,11 +34,9 @@ export function SectorSummary({ sectorSummaries }: SectorSummaryProps) {
   );
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Sector Summary</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-4">
+    <div className="rounded-lg border bg-white p-4 shadow">
+      <h3 className="text-lg font-bold mb-4">Sector Summary</h3>
+      <div className="space-y-4">
         {supportedSectors.map((sector) => {
           const sectorPercentage =
             (sector.totalInvestment / totalPortfolioValue) * 100;
@@ -56,7 +52,12 @@ export function SectorSummary({ sectorSummaries }: SectorSummaryProps) {
                 </span>
               </div>
 
-              <Progress value={sectorPercentage} className="h-2" />
+              <div className="w-full bg-gray-200 rounded h-2 overflow-hidden">
+                <div
+                  className="bg-blue-500 h-2"
+                  style={{ width: `${sectorPercentage}%` }}
+                />
+              </div>
 
               <div className="grid grid-cols-2 gap-2 text-xs">
                 <div>
@@ -97,7 +98,7 @@ export function SectorSummary({ sectorSummaries }: SectorSummaryProps) {
             </div>
           );
         })}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

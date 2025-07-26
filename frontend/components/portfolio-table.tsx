@@ -2,17 +2,6 @@
 // This demonstrates use of a recommended library (react-table) as an extra feature for the assignment.
 import { useMemo } from "react";
 import { useTable, Column, Row, CellProps } from "react-table";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
-import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertTriangle } from "lucide-react";
 import type { PortfolioStock } from "@/types/portfolio";
 
@@ -67,9 +56,9 @@ export function PortfolioTable({ portfolioData }: PortfolioTableProps) {
         Header: "Exchange",
         accessor: "fullSymbol",
         Cell: ({ value }: CellProps<PortfolioStock, any>) => (
-          <Badge variant="outline">
+          <span className="px-2 py-0.5 rounded border text-xs font-semibold">
             {value.includes(".NS") ? "NSE" : "BSE"}
-          </Badge>
+          </span>
         ),
       },
       {
@@ -79,7 +68,7 @@ export function PortfolioTable({ portfolioData }: PortfolioTableProps) {
           <div>
             ₹{row.original.cmp?.toFixed(2)}
             {row.original.cmpError && (
-              <div className="text-xs text-red-500 mt-1">
+              <div className="text-xs text-red-500 mt-1 flex items-center">
                 <AlertTriangle className="h-3 w-3 inline mr-1" />
                 Error
               </div>
@@ -121,7 +110,7 @@ export function PortfolioTable({ portfolioData }: PortfolioTableProps) {
           <div>
             {row.original.peRatio}
             {row.original.googleError && (
-              <div className="text-xs text-red-500 mt-1">
+              <div className="text-xs text-red-500 mt-1 flex items-center">
                 <AlertTriangle className="h-3 w-3 inline mr-1" />
                 Error
               </div>
@@ -157,69 +146,63 @@ export function PortfolioTable({ portfolioData }: PortfolioTableProps) {
     tableInstance;
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Portfolio Holdings</CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="overflow-x-auto">
-          <Table {...getTableProps()}>
-            <TableHeader>
-              {/* Render table headers using react-table */}
-              {headerGroups.map((headerGroup: Row<PortfolioStock>) => (
-                <TableRow {...headerGroup.getHeaderGroupProps()}>
-                  {headerGroup.headers.map((column: any) => (
-                    <TableHead {...column.getHeaderProps()}>
-                      {column.render("Header")}
-                    </TableHead>
-                  ))}
-                </TableRow>
-              ))}
-            </TableHeader>
-            <TableBody {...getTableBodyProps()}>
-              {/* Render table rows using react-table */}
-              {rows.map((row: Row<PortfolioStock>) => {
-                prepareRow(row);
-                // Show a warning row for unsupported stocks
-                if (row.original.unsupported) {
-                  return (
-                    <TableRow
-                      key={row.id}
-                      className="bg-gray-100 text-gray-400"
-                    >
-                      <TableCell colSpan={columns.length} className="italic">
-                        <AlertTriangle className="h-4 w-4 inline mr-2 text-yellow-500" />
-                        {row.original.stockName} ({row.original.symbol}):{" "}
-                        {row.original.unsupportedReason ||
-                          "Data not available for this symbol."}
-                      </TableCell>
-                    </TableRow>
-                  );
-                }
+    <div className="rounded-lg border bg-white p-4 shadow">
+      <h3 className="text-lg font-bold mb-4">Portfolio Holdings</h3>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm" {...getTableProps()}>
+          <thead>
+            {headerGroups.map((headerGroup: Row<PortfolioStock>) => (
+              <tr {...headerGroup.getHeaderGroupProps()} className="border-b">
+                {headerGroup.headers.map((column: any) => (
+                  <th
+                    {...column.getHeaderProps()}
+                    className="px-4 py-2 text-left font-medium text-gray-600"
+                  >
+                    {column.render("Header")}
+                  </th>
+                ))}
+              </tr>
+            ))}
+          </thead>
+          <tbody {...getTableBodyProps()}>
+            {rows.map((row: Row<PortfolioStock>) => {
+              prepareRow(row);
+              // Show a warning row for unsupported stocks
+              if (row.original.unsupported) {
                 return (
-                  <TableRow {...row.getRowProps()}>
-                    {row.cells.map((cell: CellProps<PortfolioStock, any>) => (
-                      <TableCell {...cell.getCellProps()}>
-                        {cell.render("Cell")}
-                      </TableCell>
-                    ))}
-                  </TableRow>
+                  <tr key={row.id} className="bg-gray-100 text-gray-400">
+                    <td colSpan={columns.length} className="italic px-4 py-2">
+                      <AlertTriangle className="h-4 w-4 inline mr-2 text-yellow-500" />
+                      {row.original.stockName} ({row.original.symbol}):{" "}
+                      {row.original.unsupportedReason ||
+                        "Data not available for this symbol."}
+                    </td>
+                  </tr>
                 );
-              })}
-            </TableBody>
-          </Table>
+              }
+              return (
+                <tr {...row.getRowProps()} className="border-b">
+                  {row.cells.map((cell: CellProps<PortfolioStock, any>) => (
+                    <td {...cell.getCellProps()} className="px-4 py-2">
+                      {cell.render("Cell")}
+                    </td>
+                  ))}
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      {/* Show a global alert if any stock has a fetch error */}
+      {portfolioData.some((stock) => stock.cmpError || stock.googleError) && (
+        <div className="mt-4 flex items-center bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 rounded">
+          <AlertTriangle className="h-4 w-4 mr-2" />
+          <span>
+            Some data could not be fetched from external APIs. Please check your
+            internet connection or try refreshing.
+          </span>
         </div>
-        {/* Show a global alert if any stock has a fetch error */}
-        {portfolioData.some((stock) => stock.cmpError || stock.googleError) && (
-          <Alert className="mt-4">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertDescription>
-              Some data could not be fetched from external APIs. Please check
-              your internet connection or try refreshing.
-            </AlertDescription>
-          </Alert>
-        )}
-      </CardContent>
-    </Card>
+      )}
+    </div>
   );
 }
