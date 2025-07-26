@@ -10,7 +10,8 @@ This is the frontend for the Portfolio Dashboard, built with Next.js, React, and
 - **Overview Cards:** Shows total investment, current value, total gain/loss, and return %.
 - **Error Handling:** User-friendly error messages and retry options if data fetch fails.
 - **Manual Refresh:** Refresh button in the header to fetch the latest data on demand.
-- **Branding:** Includes company name and CIN in the header.
+- **Real-time Updates:** Automatic data refresh every 15 seconds to keep portfolio data current.
+- **Responsive Design:** Works seamlessly on desktop, tablet, and mobile devices.
 
 ## Technologies Used
 - [Next.js 15](https://nextjs.org/) (App Router, TypeScript)
@@ -19,12 +20,12 @@ This is the frontend for the Portfolio Dashboard, built with Next.js, React, and
 - [shadcn/ui](https://ui.shadcn.com/) for UI components
 - [react-table](https://tanstack.com/table/v8) for table logic
 - [Radix UI](https://www.radix-ui.com/) for accessible primitives
-- [Recharts](https://recharts.org/) for charts (if used)
+- [Lucide React](https://lucide.dev/) for icons
 
 ## Getting Started
 
 ### Prerequisites
-- Node.js 18+
+- Node.js 20+
 - Backend server running at `http://localhost:4000` (see backend/README.md)
 
 ### Installation
@@ -55,29 +56,71 @@ npm run build && npm start
 ```
 
 ## Project Structure
-- `app/` — Next.js app directory (main pages, API routes)
-- `components/` — Reusable UI components (table, overview, sector summary, etc.)
-- `hooks/` — Custom React hooks (e.g., `usePortfolio` for data fetching)
-- `types/` — TypeScript types for portfolio data
-- `styles/` — Global styles (Tailwind)
+```
+frontend/
+├── app/                    # Next.js app directory (main pages, layout)
+│   ├── globals.css        # Global styles
+│   ├── layout.tsx         # Root layout component
+│   └── page.tsx           # Main dashboard page
+├── components/            # Reusable UI components
+│   ├── ui/               # shadcn/ui components
+│   ├── error-message.tsx # Error display component
+│   ├── header.tsx        # Dashboard header
+│   ├── loading-spinner.tsx # Loading indicator
+│   ├── portfolio-overview.tsx # Summary cards
+│   ├── portfolio-table.tsx # Main portfolio table
+│   └── sector-summary.tsx # Sector breakdown
+├── hooks/                # Custom React hooks
+│   └── usePortfolio.ts   # Portfolio data fetching hook
+├── types/                # TypeScript type definitions
+│   └── portfolio.ts      # Portfolio data types
+└── lib/                  # Utility functions
+    └── utils.ts          # Helper functions
+```
 
 ## How It Works
-- Fetches portfolio and sector data from the backend API (`/api/portfolio`).
-- Displays summary cards (investment, value, gain/loss, return %).
-- Shows a detailed table of holdings, with error and unsupported stock handling.
-- Sector summary visualizes allocation and performance by sector.
-- Auto-refreshes every 15 seconds; manual refresh available.
+- **Data Fetching:** Uses `usePortfolio` hook to fetch portfolio and sector data from the backend API (`/api/portfolio`).
+- **Auto-refresh:** Automatically refreshes data every 15 seconds to keep information current.
+- **Error Handling:** Displays user-friendly error messages and provides retry functionality.
+- **Responsive Design:** Adapts layout and table display for different screen sizes.
+- **Real-time Updates:** Shows live stock prices, P/E ratios, and earnings data from Yahoo Finance and Screener.in.
+
+## Key Components
+
+### Portfolio Overview
+- Displays summary cards with total investment, current value, gain/loss, and return percentage
+- Real-time calculations based on live market data
+
+### Portfolio Table
+- Sortable table showing all holdings with detailed information
+- Color-coded gain/loss indicators
+- Error states for failed data fetches
+- Unsupported stock warnings
+
+### Sector Summary
+- Visual breakdown of portfolio by sector
+- Shows sector-wise investment allocation and performance
+- Helps identify sector concentration and diversification
 
 ## Customization & Extensibility
 - **UI:** Easily customize with Tailwind and shadcn/ui components.
 - **API URL:** Change the backend API URL in `hooks/usePortfolio.ts` if needed.
+- **Refresh Interval:** Modify the auto-refresh interval in `hooks/usePortfolio.ts`.
 - **Add Features:** Extend with new charts, filters, or analytics as desired.
+- **Styling:** Customize colors, fonts, and layout using Tailwind CSS classes.
 
 ## Troubleshooting
 - **CORS errors:** Ensure the backend has CORS enabled (it does by default).
 - **API not reachable:** Make sure the backend is running at the expected URL.
-- **Puppeteer errors:** If backend data is missing, check backend logs for scraping issues.
+- **Data not updating:** Check if the backend is successfully fetching live data from Yahoo Finance and Screener.in.
 - **TypeScript errors:** The project is strict by default; fix type errors for best results.
+- **Build issues:** Ensure all dependencies are properly installed and Node.js version is compatible.
+
+## Performance Considerations
+- Auto-refresh is set to 15 seconds to balance data freshness with server load
+- Data is cached in the browser to reduce unnecessary API calls
+- Table virtualization is used for large portfolios to maintain smooth scrolling
+- Error boundaries prevent component crashes from affecting the entire app
 
 ## License
 MIT 

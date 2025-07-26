@@ -20,6 +20,8 @@ app.get('/api/test/yahoo/:symbol', async (req, res) => {
   res.json(result);
 });
 
+//Google Finance API Test Endpoint is working fine but for PE Ratio , I have used yfinance2 library Only
+//As Google Finance API uses scraping which is not reliable and also its very heavy on the server.
 app.get('/api/test/google/:symbol', async (req, res) => {
   const symbol = req.params.symbol;
   const result = await getGoogleFinanceData(symbol);

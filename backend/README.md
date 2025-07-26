@@ -5,12 +5,13 @@ This backend powers a dynamic portfolio dashboard. It reads your portfolio from 
 ## Features
 - Reads portfolio from `portfolio.xlsx` (Excel file)
 - Fetches live CMP (Current Market Price), P/E Ratio, and Latest Earnings:
-  - **NSE stocks:** Yahoo Finance (via `yahoo-finance2`)
+  - **NSE stocks:** Yahoo Finance (via `yahoo-finance2` library)
   - **BSE stocks:** Screener.in (via Puppeteer scraping)
 - Groups stocks by sector and provides sector-level summaries
 - Robust error handling and 15-second caching for API calls
 - Concurrency limits for external API calls to avoid rate-limiting
 - Returns detailed error and unsupported fields for each stock
+- Test endpoints for debugging individual stock data
 
 ## Setup
 
@@ -85,18 +86,38 @@ Returns your portfolio with live data and sector summaries.
 Fetches live data for a single NSE symbol from Yahoo Finance (for debugging).
 
 ### `GET /api/test/google/:symbol`
-Fetches P/E and earnings for a single NSE symbol from Google Finance (for debugging; not used in main portfolio API).
+Fetches P/E and earnings for a single NSE symbol from Google Finance (for debugging only). **Note:** This endpoint is for testing purposes only. The main portfolio API uses Yahoo Finance for NSE stocks and Screener.in for BSE stocks, as Google Finance scraping is less reliable and resource-intensive.
+
+## Data Sources & Strategy
+
+### Primary Data Sources (Used in Main Portfolio API):
+- **NSE Stocks:** Yahoo Finance via `yahoo-finance2` library
+  - Provides reliable, structured data
+  - Fetches CMP, P/E Ratio, and Latest Earnings
+  - Uses official npm package for stability
+- **BSE Stocks:** Screener.in via Puppeteer scraping
+  - Scrapes company pages for comprehensive financial data
+  - Extracts CMP, P/E, EPS, Market Cap, ROE, ROCE, and more
+  - Has fallback to Axios/Cheerio if Puppeteer fails
+
+### Test Data Source (Debugging Only):
+- **Google Finance:** Used only for `/api/test/google/:symbol` endpoint
+  - Scrapes Google Finance pages using Puppeteer
+  - Less reliable due to frequent UI changes
+  - Resource-intensive (heavy on server)
+  - **Not used in main portfolio data**
 
 ## Environment Variables
 - No API keys are required. All data is fetched from public sources.
 - You can set `PORT` to change the server port.
 
 ## Notes & Troubleshooting
-- Yahoo and Screener.in are unofficial sources and may break if their sites change.
+- Yahoo Finance and Screener.in are unofficial sources and may break if their sites change.
 - Caching is used to avoid rate limits (15 seconds per symbol for Yahoo/Screener).
 - Concurrency is limited (max 2 parallel Yahoo/Screener calls) to avoid bans.
 - If Puppeteer fails to launch (e.g., on some Linux servers), try installing missing dependencies or running with `--no-sandbox`.
 - For best results, keep your Excel file up to date and check logs for errors.
+- Google Finance API is available for testing but not recommended for production use due to reliability issues.
 
 ## Extensibility
 - To add new data sources or metrics, create a new service in `/services` and update the controller.

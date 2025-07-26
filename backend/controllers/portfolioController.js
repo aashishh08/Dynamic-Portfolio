@@ -4,13 +4,7 @@ const { getYahooStockData, getScreenerBseStockData } = require('../services/yaho
 const { getGoogleFinanceData } = require('../services/googleService');
 const pLimit = require('p-limit').default;
 
-/**
- * Main handler for GET /api/portfolio
- * - Reads the portfolio Excel file
- * - Fetches live CMP, P/E, and earnings from Yahoo/Screener
- * - Computes investment, present value, gain/loss, and sector summaries
- * - Handles both NSE and BSE stocks
- */
+
 async function getPortfolioData(req, res) {
   try {
     // Read all stocks from the Excel file (with sector assignment)

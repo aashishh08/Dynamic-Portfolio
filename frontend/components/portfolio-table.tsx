@@ -43,7 +43,7 @@ export function PortfolioTable({ portfolioData }: PortfolioTableProps) {
         Header: "Investment",
         accessor: "investment",
         Cell: ({ value }: CellProps<PortfolioStock, number>) =>
-          `₹${value.toLocaleString("en-IN")}`,
+          value ? `₹${value.toLocaleString("en-IN")}` : "₹0",
       },
       {
         Header: "Portfolio %",
@@ -78,14 +78,16 @@ export function PortfolioTable({ portfolioData }: PortfolioTableProps) {
         Header: "Present Value",
         accessor: "presentValue",
         Cell: ({ value }: CellProps<PortfolioStock, number>) =>
-          `₹${value.toLocaleString("en-IN")}`,
+          value ? `₹${value.toLocaleString("en-IN")}` : "₹0",
       },
       {
         Header: "Gain/Loss",
         accessor: "gainLoss",
         Cell: ({ row }: CellProps<PortfolioStock, number>) => {
-          const gainLoss = row.original.gainLoss;
-          const gainLossPercentage = (gainLoss / row.original.investment) * 100;
+          const gainLoss = row.original.gainLoss || 0;
+          const investment = row.original.investment || 0;
+          const gainLossPercentage =
+            investment > 0 ? (gainLoss / investment) * 100 : 0;
           return (
             <div
               className={`font-semibold ${
@@ -153,7 +155,6 @@ export function PortfolioTable({ portfolioData }: PortfolioTableProps) {
               <tr {...headerGroup.getHeaderGroupProps()} className="border-b">
                 {headerGroup.headers.map((column) => (
                   <th
-                    key={column.id}
                     {...column.getHeaderProps()}
                     className="px-4 py-2 text-left font-medium text-gray-600"
                   >
