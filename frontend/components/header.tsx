@@ -17,7 +17,6 @@ export function Header({ lastUpdated, onRefresh }: HeaderProps) {
               Portfolio Dashboard
             </h1>
             <p className="text-sm text-gray-600">Octa Byte AI Pvt Ltd</p>
-            <p className="text-xs text-gray-500">CIN: U62099KA2025PTC201620</p>
           </div>
           <div className="flex items-center space-x-4">
             <div className="text-right">

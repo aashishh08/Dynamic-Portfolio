@@ -29,13 +29,4 @@ export interface PortfolioResponse {
   sectorSummaries: SectorSummary[]
 }
 
-export interface YahooFinanceResponse {
-  cmp: number | null
-  error: string | null
-}
 
-export interface GoogleFinanceResponse {
-  peRatio: string | null
-  latestEarnings: string | null
-  error: string | null
-}

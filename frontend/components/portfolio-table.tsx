@@ -1,7 +1,14 @@
 // PortfolioTable now uses react-table for table logic, and shadcn/ui for UI components.
 // This demonstrates use of a recommended library (react-table) as an extra feature for the assignment.
 import { useMemo } from "react";
-import { useTable, Column, Row, CellProps } from "react-table";
+import {
+  useTable,
+  Column,
+  Row,
+  CellProps,
+  HeaderGroup,
+  Cell,
+} from "react-table";
 import { AlertTriangle } from "lucide-react";
 import type { PortfolioStock } from "@/types/portfolio";
 
@@ -9,15 +16,6 @@ interface PortfolioTableProps {
   portfolioData: PortfolioStock[];
 }
 
-/**
- * PortfolioTable component
- * - Displays the portfolio holdings in a responsive table.
- * - Uses react-table for table logic and shadcn/ui for UI components.
- * - Handles unsupported stocks, error states, and gain/loss coloring.
- *
- * Props:
- *   portfolioData: Array of PortfolioStock objects to display
- */
 export function PortfolioTable({ portfolioData }: PortfolioTableProps) {
   // Define columns for react-table
   const columns: Column<PortfolioStock>[] = useMemo(
@@ -26,7 +24,7 @@ export function PortfolioTable({ portfolioData }: PortfolioTableProps) {
         Header: "Particulars",
         accessor: "stockName",
         // Custom cell: show stock name, symbol, and sector
-        Cell: ({ row }: CellProps<PortfolioStock, any>) => (
+        Cell: ({ row }: CellProps<PortfolioStock, string>) => (
           <div>
             <div className="font-semibold">{row.original.stockName}</div>
             <div className="text-sm text-gray-500">{row.original.symbol}</div>
@@ -37,25 +35,25 @@ export function PortfolioTable({ portfolioData }: PortfolioTableProps) {
       {
         Header: "Purchase Price",
         accessor: "purchasePrice",
-        Cell: ({ value }: CellProps<PortfolioStock, any>) =>
+        Cell: ({ value }: CellProps<PortfolioStock, number>) =>
           `₹${value.toFixed(2)}`,
       },
       { Header: "Qty", accessor: "quantity" },
       {
         Header: "Investment",
         accessor: "investment",
-        Cell: ({ value }: CellProps<PortfolioStock, any>) =>
+        Cell: ({ value }: CellProps<PortfolioStock, number>) =>
           `₹${value.toLocaleString("en-IN")}`,
       },
       {
         Header: "Portfolio %",
         accessor: "portfolioPercent",
-        Cell: ({ value }: CellProps<PortfolioStock, any>) => `${value}%`,
+        Cell: ({ value }: CellProps<PortfolioStock, string>) => `${value}%`,
       },
       {
         Header: "Exchange",
         accessor: "fullSymbol",
-        Cell: ({ value }: CellProps<PortfolioStock, any>) => (
+        Cell: ({ value }: CellProps<PortfolioStock, string>) => (
           <span className="px-2 py-0.5 rounded border text-xs font-semibold">
             {value.includes(".NS") ? "NSE" : "BSE"}
           </span>
@@ -64,7 +62,7 @@ export function PortfolioTable({ portfolioData }: PortfolioTableProps) {
       {
         Header: "CMP",
         accessor: "cmp",
-        Cell: ({ row }: CellProps<PortfolioStock, any>) => (
+        Cell: ({ row }: CellProps<PortfolioStock, number>) => (
           <div>
             ₹{row.original.cmp?.toFixed(2)}
             {row.original.cmpError && (
@@ -79,13 +77,13 @@ export function PortfolioTable({ portfolioData }: PortfolioTableProps) {
       {
         Header: "Present Value",
         accessor: "presentValue",
-        Cell: ({ value }: CellProps<PortfolioStock, any>) =>
+        Cell: ({ value }: CellProps<PortfolioStock, number>) =>
           `₹${value.toLocaleString("en-IN")}`,
       },
       {
         Header: "Gain/Loss",
         accessor: "gainLoss",
-        Cell: ({ row }: CellProps<PortfolioStock, any>) => {
+        Cell: ({ row }: CellProps<PortfolioStock, number>) => {
           const gainLoss = row.original.gainLoss;
           const gainLossPercentage = (gainLoss / row.original.investment) * 100;
           return (
@@ -106,7 +104,7 @@ export function PortfolioTable({ portfolioData }: PortfolioTableProps) {
       {
         Header: "P/E Ratio",
         accessor: "peRatio",
-        Cell: ({ row }: CellProps<PortfolioStock, any>) => (
+        Cell: ({ row }: CellProps<PortfolioStock, string>) => (
           <div>
             {row.original.peRatio}
             {row.original.googleError && (
@@ -121,7 +119,7 @@ export function PortfolioTable({ portfolioData }: PortfolioTableProps) {
       {
         Header: "Latest Earnings",
         accessor: "latestEarnings",
-        Cell: ({ row }: CellProps<PortfolioStock, any>) => (
+        Cell: ({ row }: CellProps<PortfolioStock, string>) => (
           <div
             className={`font-medium ${
               row.original.latestEarnings?.toString().startsWith("-")
@@ -151,10 +149,11 @@ export function PortfolioTable({ portfolioData }: PortfolioTableProps) {
       <div className="overflow-x-auto">
         <table className="w-full text-sm" {...getTableProps()}>
           <thead>
-            {headerGroups.map((headerGroup: Row<PortfolioStock>) => (
+            {headerGroups.map((headerGroup: HeaderGroup<PortfolioStock>) => (
               <tr {...headerGroup.getHeaderGroupProps()} className="border-b">
-                {headerGroup.headers.map((column: any) => (
+                {headerGroup.headers.map((column) => (
                   <th
+                    key={column.id}
                     {...column.getHeaderProps()}
                     className="px-4 py-2 text-left font-medium text-gray-600"
                   >
@@ -167,22 +166,10 @@ export function PortfolioTable({ portfolioData }: PortfolioTableProps) {
           <tbody {...getTableBodyProps()}>
             {rows.map((row: Row<PortfolioStock>) => {
               prepareRow(row);
-              // Show a warning row for unsupported stocks
-              if (row.original.unsupported) {
-                return (
-                  <tr key={row.id} className="bg-gray-100 text-gray-400">
-                    <td colSpan={columns.length} className="italic px-4 py-2">
-                      <AlertTriangle className="h-4 w-4 inline mr-2 text-yellow-500" />
-                      {row.original.stockName} ({row.original.symbol}):{" "}
-                      {row.original.unsupportedReason ||
-                        "Data not available for this symbol."}
-                    </td>
-                  </tr>
-                );
-              }
+
               return (
                 <tr {...row.getRowProps()} className="border-b">
-                  {row.cells.map((cell: CellProps<PortfolioStock, any>) => (
+                  {row.cells.map((cell) => (
                     <td {...cell.getCellProps()} className="px-4 py-2">
                       {cell.render("Cell")}
                     </td>
