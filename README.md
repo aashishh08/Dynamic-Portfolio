@@ -4,6 +4,10 @@
 
 A comprehensive portfolio management system with real-time stock data, built with Next.js frontend and Node.js backend. The system reads portfolio data from Excel files and fetches live market data from multiple sources to provide an up-to-date view of your investments.
 
+## 🚀 Live Hosted
+- The Project is hosted on azure server using docker. Below is the live working url
+Link: http://20.219.81.82:3001/
+
 ## 🚀 Features
 
 ### Portfolio Management
